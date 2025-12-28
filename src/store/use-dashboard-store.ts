@@ -1,65 +1,99 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-export type WidgetType = 'card' | 'line-chart' | 'table'
+export interface WidgetLayout {
+    x: number
+    y: number
+    w: number
+    h: number
+}
+
+// Widget content types
+export interface CardWidgetContent {
+    value: string | number
+    label: string
+    trend?: number
+}
+
+export interface TableWidgetContent {
+    headers: string[]
+    rows: string[][]
+}
+
+export interface LineChartWidgetContent {
+    data: { x: string; y: number }[]
+    xLabel?: string
+    yLabel?: string
+}
+
+export type WidgetType = 'card' | 'table' | 'lineChart'
+
+export type WidgetContent = CardWidgetContent | TableWidgetContent | LineChartWidgetContent
+
+export interface WidgetConfig {
+    apiUrl?: string
+    refreshInterval?: number // in seconds
+    fieldMapping?: Record<string, string> // maps API fields to widget fields
+    selectedFields?: string[] // array of selected field paths from API
+}
 
 export interface Widget {
     id: string
     type: WidgetType
     title: string
-    config: any
-    apiUrl?: string
-    refreshInterval?: number
+    content: WidgetContent
+    layout: WidgetLayout
+    config?: WidgetConfig
 }
 
 export interface DashboardLayout {
-    i: string
-    x: number
-    y: number
-    w: number
-    h: number
-    minW?: number
-    minH?: number
+    columns: number
+    gap: number
 }
 
-interface DashboardStore {
+interface DashboardState {
     widgets: Widget[]
-    layouts: DashboardLayout[]
-    isEditMode: boolean
-    addWidget: (widget: Widget, layout: DashboardLayout) => void
+    layout: DashboardLayout
+
+    // Actions
+    addWidget: (widget: Omit<Widget, 'id'>) => void
     removeWidget: (id: string) => void
     updateWidget: (id: string, updates: Partial<Widget>) => void
-    updateLayouts: (layouts: DashboardLayout[]) => void
-    toggleEditMode: () => void
+    updateLayout: (updates: Partial<DashboardLayout>) => void
 }
 
-export const useDashboardStore = create<DashboardStore>()(
+export const useDashboardStore = create<DashboardState>()(
     persist(
         (set) => ({
             widgets: [],
-            layouts: [],
-            isEditMode: false,
-            addWidget: (widget, layout) =>
-                set((state) => ({
-                    widgets: [...state.widgets, widget],
-                    layouts: [...state.layouts, layout],
-                })),
-            removeWidget: (id) =>
-                set((state) => ({
-                    widgets: state.widgets.filter((w) => w.id !== id),
-                    layouts: state.layouts.filter((l) => l.i !== id),
-                })),
-            updateWidget: (id, updates) =>
-                set((state) => ({
-                    widgets: state.widgets.map((w) =>
-                        w.id === id ? { ...w, ...updates } : w
-                    ),
-                })),
-            updateLayouts: (layouts) => set({ layouts }),
-            toggleEditMode: () => set((state) => ({ isEditMode: !state.isEditMode })),
+            layout: {
+                columns: 4,
+                gap: 16
+            },
+
+            addWidget: (widget) => set((state) => ({
+                widgets: [
+                    ...state.widgets,
+                    { ...widget, id: crypto.randomUUID() }
+                ]
+            })),
+
+            removeWidget: (id) => set((state) => ({
+                widgets: state.widgets.filter((w) => w.id !== id)
+            })),
+
+            updateWidget: (id, updates) => set((state) => ({
+                widgets: state.widgets.map((w) =>
+                    w.id === id ? { ...w, ...updates } : w
+                )
+            })),
+
+            updateLayout: (updates) => set((state) => ({
+                layout: { ...state.layout, ...updates }
+            }))
         }),
         {
-            name: 'dashboard-storage',
+            name: 'finboard-storage',
         }
     )
 )
