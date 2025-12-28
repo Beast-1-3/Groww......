@@ -24,6 +24,7 @@ export function JsonFieldExplorer({
     const [apiData, setApiData] = useState<any>(null)
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set())
     const [searchQuery, setSearchQuery] = useState("")
     const [showArraysOnly, setShowArraysOnly] = useState(false)
 
@@ -33,7 +34,6 @@ export function JsonFieldExplorer({
             setIsLoading(true)
             setError(null)
             try {
-                // Use proxy for external URLs
                 const finalUrl = apiUrl.startsWith('http')
                     ? `/api/proxy?url=${encodeURIComponent(apiUrl)}`
                     : apiUrl
@@ -51,36 +51,71 @@ export function JsonFieldExplorer({
         fetchPreview()
     }, [apiUrl])
 
-    const flatFields = useMemo(() => {
+    const toggleFolder = (path: string) => {
+        const next = new Set(expandedPaths)
+        if (next.has(path)) next.delete(path)
+        else next.add(path)
+        setExpandedPaths(next)
+    }
+
+    const fieldHierarchy = useMemo(() => {
         if (!apiData) return []
-        const fields: { path: string; type: string; isArray: boolean }[] = []
 
-        const traverse = (obj: any, path: string = "") => {
-            if (!obj || typeof obj !== 'object') return
-
-            for (const [key, value] of Object.entries(obj)) {
-                const currentPath = path ? `${path}.${key}` : key
-                const isArr = Array.isArray(value)
-                const type = isArr ? 'array' : typeof value
-
-                fields.push({ path: currentPath, type, isArray: isArr })
-
-                if (typeof value === 'object' && value !== null && !isArr) {
-                    traverse(value, currentPath)
-                }
-            }
+        interface Node {
+            key: string
+            path: string
+            type: string
+            isArray: boolean
+            isObject: boolean
+            children?: Node[]
         }
 
-        traverse(apiData)
-        return fields
+        const buildHierarchy = (obj: any, path: string = ""): Node[] => {
+            if (!obj || typeof obj !== 'object') return []
+
+            return Object.entries(obj).map(([key, value]) => {
+                const currentPath = path ? `${path}.${key}` : key
+                const isArr = Array.isArray(value)
+                const isObj = typeof value === 'object' && value !== null && !isArr
+
+                const node: Node = {
+                    key,
+                    path: currentPath,
+                    type: isArr ? 'array' : typeof value,
+                    isArray: isArr,
+                    isObject: isObj
+                }
+
+                if (isObj || (isArr && value.length > 0 && typeof value[0] === 'object')) {
+                    // For arrays of objects, show the structure of the first item
+                    const childData = isArr ? value[0] : value
+                    node.children = buildHierarchy(childData, currentPath)
+                }
+
+                return node
+            })
+        }
+
+        return buildHierarchy(apiData)
     }, [apiData])
 
-    const filteredAvailable = flatFields.filter(f => {
-        const matchesSearch = f.path.toLowerCase().includes(searchQuery.toLowerCase())
-        const matchesType = showArraysOnly ? f.isArray : true
-        const notSelected = !selectedFields.includes(f.path)
-        return matchesSearch && matchesType && notSelected
-    })
+    const filterHierarchy = (nodes: any[], query: string, arraysOnly: boolean): any[] => {
+        return nodes
+            .map(node => {
+                const hasMatchingChild = node.children && filterHierarchy(node.children, query, arraysOnly).length > 0
+                const matchesSearch = node.path.toLowerCase().includes(query.toLowerCase())
+                const matchesType = arraysOnly ? node.isArray : true
+
+                if (matchesSearch && matchesType) return node
+                if (hasMatchingChild) return { ...node, children: filterHierarchy(node.children, query, arraysOnly) }
+                return null
+            })
+            .filter(Boolean)
+    }
+
+    const filteredHierarchy = useMemo(() => {
+        return filterHierarchy(fieldHierarchy, searchQuery, showArraysOnly)
+    }, [fieldHierarchy, searchQuery, showArraysOnly])
 
     const handleAddField = (path: string) => {
         onFieldsChange([...selectedFields, path])
@@ -88,6 +123,66 @@ export function JsonFieldExplorer({
 
     const handleRemoveField = (path: string) => {
         onFieldsChange(selectedFields.filter(f => f !== path))
+    }
+
+    const renderNode = (node: any, depth: number = 0) => {
+        const isSelected = selectedFields.includes(node.path)
+        const isExpanded = expandedPaths.has(node.path)
+        const hasChildren = node.children && node.children.length > 0
+
+        return (
+            <div key={node.path}>
+                <div
+                    className={cn(
+                        "group flex items-center justify-between p-2 rounded-xl transition-all hover:bg-muted/20",
+                        isSelected && "opacity-50 pointer-events-none"
+                    )}
+                    style={{ marginLeft: `${depth * 12}px` }}
+                >
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                        {hasChildren ? (
+                            <button
+                                onClick={() => toggleFolder(node.path)}
+                                className="h-5 w-5 flex items-center justify-center rounded hover:bg-muted/40 transition-colors"
+                            >
+                                <Plus className={cn("h-3 w-3 transition-transform", isExpanded && "rotate-45")} />
+                            </button>
+                        ) : (
+                            <div className="w-5" />
+                        )}
+                        <div className={cn(
+                            "h-6 w-6 rounded-lg flex items-center justify-center text-[10px] font-bold shadow-sm shrink-0",
+                            node.isArray ? "bg-orange-500/10 text-orange-500" :
+                                node.isObject ? "bg-purple-500/10 text-purple-500" :
+                                    "bg-blue-500/10 text-blue-500"
+                        )}>
+                            {node.isArray ? <List className="h-3.5 w-3.5" /> :
+                                node.isObject ? <Database className="h-3.5 w-3.5" /> :
+                                    <Hash className="h-3.5 w-3.5" />}
+                        </div>
+                        <div className="flex flex-col truncate">
+                            <span className="text-xs font-bold text-foreground/90 truncate">{node.key}</span>
+                            <span className="text-[9px] uppercase font-bold text-muted-foreground/30">{node.type}</span>
+                        </div>
+                    </div>
+                    {!isSelected && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-primary/20 hover:text-primary transition-all shrink-0"
+                            onClick={() => handleAddField(node.path)}
+                        >
+                            <Plus className="h-3.5 w-3.5 stroke-[3px]" />
+                        </Button>
+                    )}
+                </div>
+                {hasChildren && isExpanded && (
+                    <div className="mt-1">
+                        {node.children.map((child: any) => renderNode(child, depth + 1))}
+                    </div>
+                )}
+            </div>
+        )
     }
 
     if (isLoading) return <div className="space-y-4 py-4"><Skeleton className="h-40 w-full rounded-2xl" /></div>
@@ -119,40 +214,16 @@ export function JsonFieldExplorer({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-[400px]">
-                {/* Available Fields */}
+                {/* Available Fields - TREE VIEW */}
                 <div className="flex flex-col border border-border/30 rounded-2xl overflow-hidden bg-muted/5 group/col">
                     <div className="px-5 py-3 border-b border-border/10 bg-muted/10 flex items-center justify-between">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Available Fields</span>
-                        <span className="text-[10px] bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-full">{filteredAvailable.length}</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Available Hierarchy</span>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-muted-foreground/20">
-                        {filteredAvailable.length === 0 ? (
-                            <div className="p-8 text-center text-muted-foreground/30 text-xs italic">No fields found</div>
+                    <div className="flex-1 overflow-y-auto p-3 scrollbar-thin scrollbar-thumb-muted-foreground/20">
+                        {filteredHierarchy.length === 0 ? (
+                            <div className="p-8 text-center text-muted-foreground/30 text-xs italic">No fields match your search</div>
                         ) : (
-                            filteredAvailable.map((field) => (
-                                <div key={field.path} className="group flex items-center justify-between p-3 rounded-xl hover:bg-muted/20 transition-all">
-                                    <div className="flex items-center gap-3">
-                                        <div className={cn(
-                                            "h-7 w-7 rounded-lg flex items-center justify-center text-[10px] font-bold shadow-sm",
-                                            field.isArray ? "bg-orange-500/10 text-orange-500" : "bg-blue-500/10 text-blue-500"
-                                        )}>
-                                            {field.isArray ? <List className="h-4 w-4" /> : <Hash className="h-4 w-4" />}
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-xs font-bold text-foreground/90 truncate max-w-[150px]">{field.path}</span>
-                                            <span className="text-[10px] uppercase font-bold text-muted-foreground/30">{field.type}</span>
-                                        </div>
-                                    </div>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-primary/20 hover:text-primary transition-all"
-                                        onClick={() => handleAddField(field.path)}
-                                    >
-                                        <Plus className="h-4 w-4 stroke-[3px]" />
-                                    </Button>
-                                </div>
-                            ))
+                            filteredHierarchy.map((node) => renderNode(node))
                         )}
                     </div>
                 </div>
@@ -171,7 +242,6 @@ export function JsonFieldExplorer({
                             </div>
                         ) : (
                             selectedFields.map((path, index) => {
-                                const field = flatFields.find(f => f.path === path)
                                 return (
                                     <div key={path} className="group flex items-center justify-between p-3 rounded-xl bg-primary/10 border border-primary/10 hover:border-primary/30 transition-all mb-1">
                                         <div className="flex items-center gap-3">
@@ -192,7 +262,6 @@ export function JsonFieldExplorer({
                                                         </span>
                                                     )}
                                                 </div>
-                                                <span className="text-[10px] uppercase font-bold opacity-40">{field?.type || 'field'}</span>
                                             </div>
                                         </div>
                                         <Button

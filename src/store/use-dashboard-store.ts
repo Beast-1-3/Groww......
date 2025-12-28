@@ -66,6 +66,8 @@ interface DashboardState {
     removeWidget: (id: string) => void
     updateWidget: (id: string, updates: Partial<Widget>) => void
     updateLayout: (updates: Partial<DashboardLayout>) => void
+    clearDashboard: () => void
+    importDashboard: (widgets: Widget[], layout: DashboardLayout) => void
 }
 
 export const useDashboardStore = create<DashboardState>()(
@@ -100,10 +102,16 @@ export const useDashboardStore = create<DashboardState>()(
 
             updateLayout: (updates) => set((state) => ({
                 layout: { ...state.layout, ...updates }
-            }))
+            })),
+            clearDashboard: () => set({ widgets: [] }),
+            importDashboard: (widgets, layout) => set({ widgets, layout })
         }),
         {
             name: 'finboard-storage',
         }
     )
 )
+
+if (typeof window !== 'undefined') {
+    (window as any).zustandStore = useDashboardStore
+}

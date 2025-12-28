@@ -9,6 +9,8 @@ import { Plus, Table as TableIcon, CreditCard, LineChart as ChartIcon, Search, C
 import { useDashboardStore, WidgetType } from "@/store/use-dashboard-store"
 import { JsonFieldExplorer } from "./json-field-explorer"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
+
 
 interface AddWidgetModalProps {
     open: boolean
@@ -129,11 +131,12 @@ export function AddWidgetModal({ open, onOpenChange }: AddWidgetModalProps) {
         } : undefined
 
         if (editingWidgetId) {
-            updateWidget(editingWidgetId, {
+            updateWidget(editingWidgetId!, {
                 title: title || `Updated ${type} Widget`,
                 type,
                 config
             })
+            toast.success('Widget updated successfully!')
         } else {
             let content: any
             switch (type) {
@@ -155,10 +158,12 @@ export function AddWidgetModal({ open, onOpenChange }: AddWidgetModalProps) {
                 layout: { x: 0, y: 0, w: type === 'card' ? 3 : 6, h: type === 'card' ? 3 : 4 },
                 config
             })
+            toast.success('New widget added to dashboard!')
         }
 
         onOpenChange(false)
     }
+
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
