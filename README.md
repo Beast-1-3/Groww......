@@ -155,6 +155,10 @@ This project is private and proprietary.
 - Email: akarsh7376@gmail.com
 - GitHub: [@Beast-1-3](https://github.com/Beast-1-3)
 
+## 🤝 Contributing
+
+This is a personal project, but suggestions and feedback are welcome! Feel free to open an issue for bugs or feature requests.
+
 ## 🙏 Acknowledgments
 
 - [Next.js](https://nextjs.org/) - The React Framework
@@ -166,3 +170,4 @@ This project is private and proprietary.
 ---
 
 Built with ❤️ using Next.js and TypeScript
+
