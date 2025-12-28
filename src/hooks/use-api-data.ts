@@ -17,7 +17,12 @@ interface UseApiDataResult<T> {
 
 // Fetcher function for SWR
 const fetcher = async (url: string) => {
-    const response = await fetch(url)
+    // If it's an external URL (http/https), route it through our secure proxy
+    const finalUrl = url.startsWith('http')
+        ? `/api/proxy?url=${encodeURIComponent(url)}`
+        : url
+
+    const response = await fetch(finalUrl)
     if (!response.ok) {
         throw new Error(`API error: ${response.status} ${response.statusText}`)
     }

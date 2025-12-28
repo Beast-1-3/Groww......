@@ -98,7 +98,12 @@ export function AddWidgetModal({ open, onOpenChange }: AddWidgetModalProps) {
         setIsTesting(true)
         setTestResult(null)
         try {
-            const res = await fetch(apiUrl)
+            // Use proxy for external URLs
+            const finalUrl = apiUrl.startsWith('http')
+                ? `/api/proxy?url=${encodeURIComponent(apiUrl)}`
+                : apiUrl
+
+            const res = await fetch(finalUrl)
             if (!res.ok) throw new Error("Connection failed")
             const data = await res.json()
             const fieldsCount = Object.keys(data).length

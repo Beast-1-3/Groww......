@@ -55,6 +55,12 @@ export function LineChartWidget({ content, config, onRefresh }: LineChartWidgetP
                 }))
             }
         }
+
+        // Limit data points to 100 for better performance and rendering
+        if (data.length > 100) {
+            const samplingRate = Math.ceil(data.length / 100)
+            data = data.filter((_: any, i: number) => i % samplingRate === 0)
+        }
     }
 
     const xLabel = displayData?.xLabel
@@ -97,11 +103,11 @@ export function LineChartWidget({ content, config, onRefresh }: LineChartWidgetP
                 <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <defs>
                         <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                            <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.4} />
+                            <stop offset="95%" stopColor="var(--primary)" stopOpacity={0.05} />
                         </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted-foreground))" opacity={0.05} />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--muted-foreground)" opacity={0.1} />
                     <XAxis
                         dataKey="x"
                         hide
@@ -120,17 +126,18 @@ export function LineChartWidget({ content, config, onRefresh }: LineChartWidgetP
                             boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
                             backdropFilter: 'blur(8px)'
                         }}
-                        itemStyle={{ color: 'hsl(var(--primary))' }}
-                        cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '4 4' }}
+                        itemStyle={{ color: 'var(--primary)' }}
+                        cursor={{ stroke: 'var(--primary)', strokeWidth: 1, strokeDasharray: '4 4' }}
                     />
                     <Area
                         type="monotone"
                         dataKey="y"
-                        stroke="hsl(var(--primary))"
-                        strokeWidth={3}
+                        stroke="var(--primary)"
+                        strokeWidth={4}
                         fillOpacity={1}
                         fill="url(#colorValue)"
                         animationDuration={1500}
+                        className="drop-shadow-[0_4px_8px_rgba(0,0,0,0.1)]"
                     />
                 </AreaChart>
             </ResponsiveContainer>

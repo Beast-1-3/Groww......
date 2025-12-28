@@ -75,15 +75,15 @@ export function CardWidget({ content, config, onRefresh }: CardWidgetProps) {
                 <div className="text-4xl font-black text-foreground tracking-tighter">
                     {formattedValue}
                 </div>
-                {trend !== undefined && (
+                {trend !== undefined && trend !== null && !isNaN(Number(trend)) && (
                     <div className={cn(
                         "flex items-center gap-1 text-sm font-bold px-2 py-0.5 rounded-full",
-                        trend >= 0
+                        Number(trend) >= 0
                             ? "bg-emerald-500/10 text-emerald-400"
                             : "bg-red-500/10 text-red-400"
                     )}>
-                        {trend >= 0 ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
-                        <span>{Math.abs(trend)}%</span>
+                        {Number(trend) >= 0 ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+                        <span>{Math.abs(Number(trend))}%</span>
                     </div>
                 )}
             </div>

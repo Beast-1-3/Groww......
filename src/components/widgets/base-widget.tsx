@@ -21,25 +21,36 @@ export function BaseWidget({ title, type, config, onRemove, onRefresh, onSetting
     return (
         <div className="h-full w-full rounded-2xl border border-border/50 bg-card/60 backdrop-blur-sm shadow-xl overflow-hidden flex flex-col group transition-all hover:border-border/80">
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-border/10 bg-muted/5">
-                <div className="drag-handle flex items-center gap-3 cursor-move flex-1">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border/10 bg-muted/5">
+                <div className="drag-handle flex items-center gap-3 cursor-move flex-1 min-w-0">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary flex-shrink-0">
                         <Icon className="h-4 w-4" />
                     </div>
-                    <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-sm tracking-tight text-foreground">{title}</h3>
+                    <div className="flex items-center gap-2 min-w-0">
+                        <h3 className="font-bold text-sm tracking-tight text-foreground truncate">{title}</h3>
                         {config?.refreshInterval && (
-                            <span className="px-2 py-0.5 rounded-md bg-muted/50 text-[10px] font-bold text-muted-foreground uppercase">
+                            <span className="px-2 py-0.5 rounded-md bg-muted/50 text-[10px] font-bold text-muted-foreground uppercase flex-shrink-0">
                                 {config.refreshInterval}s
                             </span>
                         )}
                     </div>
                 </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity flex-shrink-0">
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-primary"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            onRemove()
+                        }}
+                    >
+                        <X className="h-4 w-4" />
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-primary transition-colors"
                         onClick={(e) => {
                             e.stopPropagation()
                             onRefresh?.()
@@ -50,24 +61,13 @@ export function BaseWidget({ title, type, config, onRemove, onRefresh, onSetting
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-primary"
+                        className="h-8 w-8 text-muted-foreground hover:text-primary transition-colors"
                         onClick={(e) => {
                             e.stopPropagation()
                             onSettings?.()
                         }}
                     >
                         <Settings className="h-4 w-4" />
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={(e) => {
-                            e.stopPropagation()
-                            onRemove()
-                        }}
-                    >
-                        <X className="h-4 w-4" />
                     </Button>
                 </div>
             </div>
