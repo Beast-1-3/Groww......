@@ -73,7 +73,7 @@ export function BaseWidget({ title, type, config, onRemove, onRefresh, onSetting
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-visible relative">
+            <div className="flex-1 overflow-hidden relative min-h-0">
                 {children}
             </div>
         </div>

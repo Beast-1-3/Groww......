@@ -5,6 +5,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { AlertCircle, LineChart as LineChartIcon } from "lucide-react"
 import { useApiData } from "@/hooks/use-api-data"
 import { Skeleton } from "@/components/ui/skeleton"
+import { cn, getNestedValue } from "@/lib/utils"
 
 import { useEffect } from "react"
 
@@ -18,6 +19,7 @@ export function LineChartWidget({ content, config, onRefresh }: LineChartWidgetP
     const { data: apiData, error, isLoading, mutate } = useApiData<any>({
         apiUrl: config?.apiUrl,
         refreshInterval: config?.refreshInterval,
+        rootPath: config?.rootPath,
         fieldMapping: config?.fieldMapping
     })
 
@@ -26,7 +28,35 @@ export function LineChartWidget({ content, config, onRefresh }: LineChartWidgetP
     }, [mutate, onRefresh])
 
     const displayData = apiData || content
-    const data = displayData?.data || []
+    let data = displayData?.data || []
+
+    // If we have API data and it's an array
+    if (apiData && Array.isArray(apiData)) {
+        if (config?.fieldMapping?.x && config?.fieldMapping?.y) {
+            data = apiData.map(item => ({
+                x: getNestedValue(item, config.fieldMapping!.x),
+                y: Number(getNestedValue(item, config.fieldMapping!.y)) || 0
+            }))
+        } else if (apiData.length > 0) {
+            // Auto-discover: find first numeric field for Y, and use first field for X
+            const firstItem = apiData[0]
+            if (firstItem && typeof firstItem === 'object') {
+                const keys = Object.keys(firstItem)
+                const yKey = keys.find(k => {
+                    const val = firstItem[k];
+                    return (typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)))) && k.toLowerCase().includes('price') || k.toLowerCase().includes('value') || k.toLowerCase().includes('amount')
+                }) || keys.find(k => typeof firstItem[k] === 'number') || keys[1] || keys[0]
+
+                const xKey = keys.find(k => k !== yKey && (k.toLowerCase().includes('time') || k.toLowerCase().includes('date') || k.toLowerCase().includes('label'))) || keys[0]
+
+                data = apiData.map(item => ({
+                    x: String(getNestedValue(item, xKey)),
+                    y: Number(getNestedValue(item, yKey)) || 0
+                }))
+            }
+        }
+    }
+
     const xLabel = displayData?.xLabel
     const yLabel = displayData?.yLabel
 

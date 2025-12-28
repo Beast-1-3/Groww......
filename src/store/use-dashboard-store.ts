@@ -33,6 +33,7 @@ export type WidgetContent = CardWidgetContent | TableWidgetContent | LineChartWi
 export interface WidgetConfig {
     apiUrl?: string
     refreshInterval?: number // in seconds
+    rootPath?: string // path to the data array (for tables/charts)
     fieldMapping?: Record<string, string> // maps API fields to widget fields
     selectedFields?: string[] // array of selected field paths from API
 }

@@ -3,6 +3,7 @@ import useSWR from 'swr'
 interface UseApiDataOptions {
     apiUrl?: string | null
     refreshInterval?: number // in seconds
+    rootPath?: string
     fieldMapping?: Record<string, string>
 }
 
@@ -47,12 +48,13 @@ function transformData<T>(rawData: any, fieldMapping?: Record<string, string>): 
 export function useApiData<T = any>({
     apiUrl,
     refreshInterval = 60,
+    rootPath,
     fieldMapping
 }: UseApiDataOptions): UseApiDataResult<T> {
     // Only fetch if apiUrl is provided
     const shouldFetch = apiUrl && apiUrl.trim().length > 0
 
-    const { data: rawData, error, isLoading, isValidating, mutate } = useSWR(
+    const { data: fetchResult, error, isLoading, isValidating, mutate } = useSWR(
         shouldFetch ? apiUrl : null,
         fetcher,
         {
@@ -64,6 +66,9 @@ export function useApiData<T = any>({
             errorRetryInterval: 5000
         }
     )
+
+    // Handle root path extraction
+    const rawData = rootPath ? getNestedValue(fetchResult, rootPath) : fetchResult
 
     // Transform the data using field mapping
     const transformedData = transformData<T>(rawData, fieldMapping)

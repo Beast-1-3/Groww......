@@ -22,6 +22,7 @@ export function AddWidgetModal({ open, onOpenChange }: AddWidgetModalProps) {
     const [type, setType] = useState<WidgetType>("card")
     const [apiUrl, setApiUrl] = useState("")
     const [refreshInterval, setRefreshInterval] = useState("60")
+    const [rootPath, setRootPath] = useState("")
     const [fieldMapping, setFieldMapping] = useState<Record<string, string>>({})
     const [selectedFields, setSelectedFields] = useState<string[]>([])
     const [isTesting, setIsTesting] = useState(false)
@@ -30,6 +31,19 @@ export function AddWidgetModal({ open, onOpenChange }: AddWidgetModalProps) {
     const handleFieldsChange = (fields: string[]) => {
         setSelectedFields(fields)
 
+        // Detect array root path (e.g., from "data.0.price" -> root is "data")
+        let detectedRoot = ""
+        if (fields.length > 0) {
+            const firstField = fields[0]
+            const match = firstField.match(/^(.*)\.\d+\./)
+            if (match) {
+                detectedRoot = match[1]
+            } else if (firstField.match(/^\d+\./)) {
+                detectedRoot = ""
+            }
+        }
+        setRootPath(detectedRoot)
+
         // Auto-generate field mapping based on type
         const newMapping: Record<string, string> = {}
         if (type === 'card' && fields.length > 0) {
@@ -37,13 +51,15 @@ export function AddWidgetModal({ open, onOpenChange }: AddWidgetModalProps) {
             if (fields[1]) newMapping['label'] = fields[1]
             if (fields[2]) newMapping['trend'] = fields[2]
         } else if (type === 'table') {
-            // For tables, we might just use the fields as they are or map them to column indices
             fields.forEach((field, index) => {
-                newMapping[index.toString()] = field
+                const relativePath = detectedRoot ? field.replace(`${detectedRoot}.`, '').replace(/^\d+\./, '') : field.replace(/^\d+\./, '')
+                newMapping[index.toString()] = relativePath
             })
         } else if (type === 'lineChart' && fields.length >= 2) {
-            if (fields[0]) newMapping['x'] = fields[0]
-            if (fields[1]) newMapping['y'] = fields[1]
+            const relX = detectedRoot ? fields[0].replace(`${detectedRoot}.`, '').replace(/^\d+\./, '') : fields[0].replace(/^\d+\./, '')
+            const relY = detectedRoot ? fields[1].replace(`${detectedRoot}.`, '').replace(/^\d+\./, '') : fields[1].replace(/^\d+\./, '')
+            newMapping['x'] = relX
+            newMapping['y'] = relY
         }
         setFieldMapping(newMapping)
     }
@@ -57,6 +73,7 @@ export function AddWidgetModal({ open, onOpenChange }: AddWidgetModalProps) {
                 setType(widget.type)
                 setApiUrl(widget.config?.apiUrl || "")
                 setRefreshInterval(widget.config?.refreshInterval?.toString() || "60")
+                setRootPath(widget.config?.rootPath || "")
                 setFieldMapping(widget.config?.fieldMapping || {})
                 setSelectedFields(widget.config?.selectedFields || [])
             }
@@ -68,6 +85,7 @@ export function AddWidgetModal({ open, onOpenChange }: AddWidgetModalProps) {
                 setType("card")
                 setApiUrl("")
                 setRefreshInterval("60")
+                setRootPath("")
                 setFieldMapping({})
                 setSelectedFields([])
                 setTestResult(null)
@@ -100,6 +118,7 @@ export function AddWidgetModal({ open, onOpenChange }: AddWidgetModalProps) {
         const config = apiUrl ? {
             apiUrl,
             refreshInterval: parseInt(refreshInterval) || 60,
+            rootPath,
             fieldMapping,
             selectedFields
         } : undefined
