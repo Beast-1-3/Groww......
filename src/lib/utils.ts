@@ -4,3 +4,10 @@ import { twMerge } from "tailwind-merge"
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
+
+export function getNestedValue(obj: any, path: string): any {
+  if (!path) return obj
+  return path.split('.').reduce((current, key) => {
+    return current?.[key]
+  }, obj)
+}

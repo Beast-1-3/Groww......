@@ -55,6 +55,11 @@ interface DashboardState {
     widgets: Widget[]
     layout: DashboardLayout
 
+    isAddModalOpen: boolean
+    setIsAddModalOpen: (open: boolean) => void
+    editingWidgetId: string | null
+    setEditingWidgetId: (id: string | null) => void
+
     // Actions
     addWidget: (widget: Omit<Widget, 'id'>) => void
     removeWidget: (id: string) => void
@@ -70,6 +75,10 @@ export const useDashboardStore = create<DashboardState>()(
                 columns: 4,
                 gap: 16
             },
+            isAddModalOpen: false,
+            setIsAddModalOpen: (open) => set({ isAddModalOpen: open }),
+            editingWidgetId: null,
+            setEditingWidgetId: (id) => set({ editingWidgetId: id }),
 
             addWidget: (widget) => set((state) => ({
                 widgets: [

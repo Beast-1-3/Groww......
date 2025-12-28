@@ -5,6 +5,7 @@ import { Responsive, WidthProvider } from "react-grid-layout"
 import type { Layout } from "react-grid-layout"
 import { useDashboardStore } from "@/store/use-dashboard-store"
 import { WidgetRenderer } from "@/components/widgets/widget-renderer"
+import { EmptyState } from "@/components/dashboard/empty-state"
 
 const ResponsiveGridLayout = WidthProvider(Responsive)
 
@@ -65,14 +66,7 @@ export function DashboardGrid() {
     }
 
     if (widgets.length === 0) {
-        return (
-            <div className="flex h-full items-center justify-center">
-                <div className="text-center space-y-2">
-                    <p className="text-lg font-medium text-muted-foreground">No widgets yet</p>
-                    <p className="text-sm text-muted-foreground">Click "Add Widget" to get started</p>
-                </div>
-            </div>
-        )
+        return <EmptyState />
     }
 
     return (

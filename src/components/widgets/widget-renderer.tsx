@@ -7,20 +7,45 @@ import { CardWidget } from "./card-widget"
 import { TableWidget } from "./table-widget"
 import { LineChartWidget } from "./line-chart-widget"
 
+import { useDashboardStore } from "@/store/use-dashboard-store"
+import { useState, useRef, useCallback } from "react"
+
 interface WidgetRendererProps {
     widget: Widget
     onRemove: () => void
 }
 
 function WidgetRendererComponent({ widget, onRemove }: WidgetRendererProps) {
+    const refreshRef = useRef<() => void>(() => { })
+    const { setEditingWidgetId, setIsAddModalOpen } = useDashboardStore()
+
+    const handleSettings = useCallback(() => {
+        setEditingWidgetId(widget.id)
+        setIsAddModalOpen(true)
+    }, [widget.id, setEditingWidgetId, setIsAddModalOpen])
+
+    const handleRefresh = useCallback(() => {
+        refreshRef.current()
+    }, [])
+
+    const registerRefresh = useCallback((fn: () => void) => {
+        refreshRef.current = fn
+    }, [])
+
     const renderContent = () => {
+        const props = {
+            content: widget.content as any,
+            config: widget.config,
+            onRefresh: registerRefresh
+        }
+
         switch (widget.type) {
             case 'card':
-                return <CardWidget content={widget.content as any} config={widget.config} />
+                return <CardWidget {...props} />
             case 'table':
-                return <TableWidget content={widget.content as any} config={widget.config} />
+                return <TableWidget {...props} />
             case 'lineChart':
-                return <LineChartWidget content={widget.content as any} config={widget.config} />
+                return <LineChartWidget {...props} />
             default:
                 return (
                     <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
@@ -31,7 +56,14 @@ function WidgetRendererComponent({ widget, onRemove }: WidgetRendererProps) {
     }
 
     return (
-        <BaseWidget title={widget.title} onRemove={onRemove}>
+        <BaseWidget
+            title={widget.title}
+            type={widget.type}
+            config={widget.config}
+            onRemove={onRemove}
+            onRefresh={handleRefresh}
+            onSettings={handleSettings}
+        >
             {renderContent()}
         </BaseWidget>
     )

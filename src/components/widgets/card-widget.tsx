@@ -5,22 +5,32 @@ import { TrendingUp, TrendingDown, Loader2, AlertCircle } from "lucide-react"
 import { useApiData } from "@/hooks/use-api-data"
 import { formatValue } from "@/lib/format"
 import { Skeleton } from "@/components/ui/skeleton"
+import { cn } from "@/lib/utils"
+
+import { useEffect } from "react"
 
 interface CardWidgetProps {
     content: CardWidgetContent
     config?: WidgetConfig
+    onRefresh?: (refreshFn: () => void) => void
 }
 
-export function CardWidget({ content, config }: CardWidgetProps) {
-    const { data: apiData, error, isLoading } = useApiData<CardWidgetContent>({
+export function CardWidget({ content, config, onRefresh }: CardWidgetProps) {
+    const { data: apiData, error, isLoading, mutate } = useApiData<CardWidgetContent>({
         apiUrl: config?.apiUrl,
         refreshInterval: config?.refreshInterval,
         fieldMapping: config?.fieldMapping
     })
 
+    useEffect(() => {
+        onRefresh?.(() => mutate())
+    }, [mutate, onRefresh])
+
     // Use API data if available, otherwise fall back to static content
     const displayData = apiData || content
-    const { value, label, trend } = displayData
+    const value = displayData?.value ?? '0'
+    const label = displayData?.label ?? 'No Label'
+    const trend = displayData?.trend
 
     if (isLoading) {
         return (
@@ -52,37 +62,40 @@ export function CardWidget({ content, config }: CardWidgetProps) {
     })
 
     return (
-        <div className="flex h-full flex-col items-center justify-center p-6 space-y-4">
+        <div className="flex h-full flex-col justify-center px-6 py-4">
+            {/* Data Label */}
+            <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs font-semibold text-muted-foreground uppercase opacity-70">
+                    {label || 'Value'}
+                </span>
+            </div>
+
             {/* Main Value */}
-            <div className="text-center">
-                <div className="text-5xl font-bold tracking-tight bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent">
+            <div className="flex items-baseline gap-3">
+                <div className="text-4xl font-black text-foreground tracking-tighter">
                     {formattedValue}
                 </div>
+                {trend !== undefined && (
+                    <div className={cn(
+                        "flex items-center gap-1 text-sm font-bold px-2 py-0.5 rounded-full",
+                        trend >= 0
+                            ? "bg-emerald-500/10 text-emerald-400"
+                            : "bg-red-500/10 text-red-400"
+                    )}>
+                        {trend >= 0 ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+                        <span>{Math.abs(trend)}%</span>
+                    </div>
+                )}
             </div>
 
-            {/* Label */}
-            <div className="text-center">
-                <div className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                    {label}
-                </div>
+            {/* Detail info */}
+            <div className="mt-4 flex items-center justify-between text-[11px] font-bold text-muted-foreground/50 uppercase tracking-widest">
+                <span>Last updated: {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+                <span className="flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Live
+                </span>
             </div>
-
-            {/* Trend Indicator */}
-            {trend !== undefined && (
-                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${trend >= 0
-                        ? 'bg-green-500/10 text-green-600 dark:text-green-500'
-                        : 'bg-red-500/10 text-red-600 dark:text-red-500'
-                    }`}>
-                    {trend >= 0 ? (
-                        <TrendingUp className="h-4 w-4" />
-                    ) : (
-                        <TrendingDown className="h-4 w-4" />
-                    )}
-                    <span className="text-sm font-semibold">
-                        {Math.abs(trend)}%
-                    </span>
-                </div>
-            )}
         </div>
     )
 }

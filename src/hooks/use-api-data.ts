@@ -11,6 +11,7 @@ interface UseApiDataResult<T> {
     error: Error | null
     isLoading: boolean
     isValidating: boolean
+    mutate: () => Promise<any>
 }
 
 // Fetcher function for SWR
@@ -22,14 +23,8 @@ const fetcher = async (url: string) => {
     return response.json()
 }
 
-// Helper to get nested value from object using dot notation
-function getNestedValue(obj: any, path: string): any {
-    if (!path) return obj
-
-    return path.split('.').reduce((current, key) => {
-        return current?.[key]
-    }, obj)
-}
+import { Skeleton } from "@/components/ui/skeleton"
+import { cn, getNestedValue } from "@/lib/utils"
 
 // Transform API response using field mapping
 function transformData<T>(rawData: any, fieldMapping?: Record<string, string>): T | null {
@@ -57,7 +52,7 @@ export function useApiData<T = any>({
     // Only fetch if apiUrl is provided
     const shouldFetch = apiUrl && apiUrl.trim().length > 0
 
-    const { data: rawData, error, isLoading, isValidating } = useSWR(
+    const { data: rawData, error, isLoading, isValidating, mutate } = useSWR(
         shouldFetch ? apiUrl : null,
         fetcher,
         {
@@ -77,6 +72,7 @@ export function useApiData<T = any>({
         data: transformedData,
         error: error || null,
         isLoading: shouldFetch ? isLoading : false,
-        isValidating: shouldFetch ? isValidating : false
+        isValidating: shouldFetch ? isValidating : false,
+        mutate
     }
 }
